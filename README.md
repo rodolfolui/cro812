@@ -38,9 +38,12 @@ Prepare una maquina virtual con RHEL 8.x (Linux Red Hat Enterprise) o con Ubuntu
        [root@crort /]# dnf --disableplugin=subscription-manager install -y MariaDB-server galera MariaDB-client MariaDB-shared MariaDB-backup MariaDB-common
        [root@crort /]# /etc/init.d/mysql start
        [root@crort /]# mysqladmin -f -u root password 'Passw0rd'
-    7. En otra ventana de linux por fuera del contenedor, copie el instalador del producto ubicado en Server.tar.gz dentro del contenedor asi:
+
+### Instalacion de Resilency Orchestration
+
+    1. En otra ventana de linux por fuera del contenedor, copie el instalador del producto ubicado en Server.tar.gz dentro del contenedor asi:
        $ docker copy Server.tar.gz crort:/tmp
-    8. Ejecute la instalación del producto siguiendo los pasos descritos en la guia de instalación de CRO a partir de la página 77 para el modo consola:
+    2. Ejecute la instalación del producto siguiendo los pasos descritos en la guia de instalación de CRO a partir de la página 77 para el modo consola:
        [root@crort /]# cd tmp
        [root@crort /]# tar xvzf Server.tar.gz
        [root@crort /]# sed 's/LOCAL_HOST_SERVER=/LOCAL_HOST_SERVER=10.0.0.2/
@@ -51,17 +54,20 @@ Prepare una maquina virtual con RHEL 8.x (Linux Red Hat Enterprise) o con Ubuntu
        > s/MODIFY_SYSTEM_FILES=0/MODIFY_SYSTEM_FILES=1/
        > s/TOMCAT_HOME=.*/TOMCAT_HOME=\/opt\/apache-tomcat-9.0.37/' /tmp/PanacesServerInstaller.properties > /tmp/PanacesServerCro.properties
        [root@crort /]# /tmp/install.bin -f /tmp/PanacesServerCro.properties
+    3. Ejecute los pasos post instalación descritos en la guia de instalación de CRO a partir de la página 85 (numeral 5.6) para el modo consola
+
+### Inicio de servicios de RO
+
+    1. Inicie los servicios de CRO en el contenedor:
+       export EAMSROOT=/opt/panaces
+       /etc/init.d/mysql status || /etc/init.d/mysql start
+       cd /opt/panaces/bin
+       ./panaces restart
+    2. Por último por fuera del contenedor en otra ventana, guarde una imagen del contenedor en ejecución para no perder la instalación (recuerden, los contenedores son por defecto no persistentes)
+       $ docker commit crort cro812:latest
     
-    1. Ejecute los pasos post instalación descritos en la guia de instalación de CRO a partir de la página 85 (numeral 5.6) para el modo consola
-    2. Inicie los servicios de CRO en el contenedor:
-    3. export EAMSROOT=/opt/panaces
-    4. /etc/init.d/mysql status || /etc/init.d/mysql start
-    5. cd /opt/panaces/bin
-    6. ./panaces restart
-    7. Por último por fuera del contenedor en otra ventana, guarde una imagen del contenedor en ejecución para no perder la instalación (recuerden, los contenedores son por defecto no persistentes)
-    8. $ docker commit crort cro812:latest
-    9. Y listo! ya tenemos una imagen base de cro que podemos usar para nuestras capacitaciones
-    10. $ docker images
+Y listo! ya tenemos una imagen base de cro que podemos usar para nuestras capacitaciones
+    $ docker images
 
 REPOSITORY                           TAG             IMAGE ID      CREATED        SIZE
 localhost/cro812                     latest          05fc28b5ad50  2 months ago   4.15 GB
