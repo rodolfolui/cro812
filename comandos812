@@ -1,5 +1,5 @@
 # Copiar los medios de instalación
-[ -f cro812/Server.tar.gz ] || cp /home/rvasquez/DownloadDirector/CRO812/Server.tar.gz cro812
+[ -f cro812/Server.tar.gz ] || cp $HOME/CRO812/Server.tar.gz cro812
 
 # Crear volumen para albergar los medios de instalacion
 docker volume create cro812
