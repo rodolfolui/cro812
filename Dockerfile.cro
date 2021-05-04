@@ -1,0 +1,46 @@
+FROM registry.access.redhat.com/ubi8/ubi:8.2
+# CRO812 image for OpenShift.
+#
+# Volumes:
+#  * /install - Installation media on build step
+
+ENV HOME=/var/lib/mysql \
+    SUMMARY="MariaDB 10.3.25 Tomcat 9.0.37 Panaces 8.1.2" \
+    DESCRIPTION="Resilency Orchestration 8.1.2"
+
+LABEL summary="$SUMMARY" \
+      description="$DESCRIPTION" \
+      io.k8s.description="$DESCRIPTION" \
+      io.k8s.display-name="CRO 8.1.2" \
+      io.openshift.expose-services="3306:mysql,8080:tomcat" \
+      io.openshift.tags="database,mysql,mariadb,mariadb103,mariadb-103" \
+      com.redhat.component="mariadb-103-container" \
+      name="cro812" \
+      version="1" \
+      usage="docker run -it -e DISPLAY=$DISPLAY --network host -v /tmp/.X11-unix:/tmp/.X11-unix -p 8080:8080 -p 3306:3306 -h crort --name crort cro80 bash" \
+      maintainer="IBM Colombia <rvasquez@co.ibm.com>"
+
+# Installation of dependencies
+RUN yum --disableplugin=subscription-manager install -y yum-utils && \
+    INSTALL_PKGS="hostname libXtst net-tools iputils procps-ng rsync sudo unzip wget" && \
+    yum --disableplugin=subscription-manager install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
+    rpm -V $INSTALL_PKGS && \
+    yum clean all
+
+# Volume with installation software
+VOLUME ["/install"]
+
+# Installation of Tomcat 9.0.37
+RUN wget -qO- https://archive.apache.org/dist/tomcat/tomcat-9/v9.0.37/bin/apache-tomcat-9.0.37.tar.gz | tar -xzf - -C /opt 
+
+# Installation of MariaDB 10.3.25
+COPY MariaDB.repo /etc/yum.repos.d
+COPY boost-program-options-1.66.0-10.el8.x86_64.rpm .
+RUN rpm -Uvh boost-program-options-1.66.0-10.el8.x86_64.rpm && rm boost-program-options-1.66.0-10.el8.x86_64.rpm
+RUN dnf --disableplugin=subscription-manager install -y MariaDB-server galera MariaDB-client MariaDB-shared MariaDB-backup MariaDB-common
+
+# Installation script CRO 8.1.2
+COPY instcro /
+
+# MariaDB port and Tomcat port
+EXPOSE 3306,8080

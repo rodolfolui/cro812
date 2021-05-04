@@ -1,0 +1,17 @@
+# Copiar los medios de instalación
+[ -f cro812/Server.tar.gz ] || cp /home/rvasquez/DownloadDirector/CRO812/Server.tar.gz cro812
+
+# Crear volumen para albergar los medios de instalacion
+docker volume create cro812
+
+# Subir una instancia de ubuntu y copiar los instaladores
+docker run --name base1 --volume cro812:/install registry.access.redhat.com/ubi8/ubi:8.2 bash -c "tail -f /dev/null" &
+sleep 5
+docker cp cro812/Server.tar.gz base1:/install/
+docker cp cro812/birt-runtime-4_3_2.zip base1:/install/
+docker exec -i -t base1 /bin/bash -c "cd /install/ ; [ -f install.bin ] || tar xvzf Server.tar.gz; rm Server.tar.gz" && docker stop base1 && docker rm base1
+
+# Preparar los prerequisitos de CRO
+docker build -f Dockerfile.cro -t cro812
+docker run -it -v cro812:/install --name crort localhost/cro812 bash -c /instcro
+docker commit crort cro:812

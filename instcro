@@ -1,0 +1,163 @@
+#!/usr/bin/bash
+
+echo "Configurando parametros de SO"
+grep '^panacesuser' /etc/security/limits.conf || sed -i.bak 's/\# End of file/root            soft    nproc   10240 \
+root            hard    nproc   10240 \
+root            soft    nofile  20480 \
+root            hard    nofile  20480 \
+panacesuser     soft    nproc   10240 \
+panacesuser     hard    nproc   10240 \
+panacesuser     soft    nofile  20480 \
+panacesuser     hard    nofile  20480 \
+\
+&/' /etc/security/limits.conf
+
+echo "Definiendo propiedades de instalacion"
+sed -i.bak 's/LOCAL_HOST_SERVER.*/LOCAL_HOST_SERVER='`hostname -i`'/
+s/DATABASE_PASSWORD.*/DATABASE_PASSWORD=Passw0rd/
+s/ON_DEMAND_PASSWORD.*/ON_DEMAND_PASSWORD=No/
+s/LICENSE_ACCEPTED.*/LICENSE_ACCEPTED=TRUE/
+s/SUPPORT_USER_PASSWORD.*/SUPPORT_USER_PASSWORD=Orchestration123./
+s/SANOVI_USER_PASSWORD.*/SANOVI_USER_PASSWORD=Orchestration123./
+s/MODIFY_SYSTEM_FILES.*/MODIFY_SYSTEM_FILES=1/
+s/TOMCAT_HOME.*/TOMCAT_HOME=\/opt\/apache-tomcat-9.0.37/' /install/PanacesServerInstaller.properties
+
+echo "Configurando mariadb"
+mkdir -p /opt/panaces/installconfig/mariadbencryption
+cat > /etc/my.cnf <<!
+#
+# This group is read both both by the client and the server
+# use it for options that affect everything
+#
+[client-server]
+
+#
+# include all files from the config directory
+#
+!includedir /etc/my.cnf.d
+
+[mysqld]
+max_allowed_packet=16M
+innodb_strict_mode=OFF
+sql_mode="NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION"
+log-bin-trust-function-creators=1
+log-bin-trust-function-creators=500
+[mariadb]
+plugin-load-add=file_key_management.so
+file_key_management
+file_key_management_filename=/opt/panaces/installconfig/mariadbencryption/keys.txt
+innodb_default_encryption_key_id=2
+
+ssl
+ssl-ca=/opt/panaces/installconfig/mariadbencryption/ca-cert.pem
+ssl-cert=/opt/panaces/installconfig/mariadbencryption/server-cert.pem
+ssl-key=/opt/panaces/installconfig/mariadbencryption/server-key.pem
+!
+cp /install/mariadbencryption/* /opt/panaces/installconfig/mariadbencryption
+/etc/init.d/mysql start
+
+if echo "SHOW VARIABLES LIKE 'have_ssl';" | mysql -u root -p | awk '/have_ssl/ { print $2 }' | grep DISABLED
+then
+  mkdir -p /etc/mysql
+  # Configurar SSL para mariadb
+  cat > /tmp/openssl.opts <<!
+CO
+
+
+Proteccion
+
+
+
+
+
+
+!
+
+  echo "************************************ Creating encryption keys ****************************************"
+  openssl enc -aes-256-ctr -k P4ssw0rd2018! -P -md sha1 | awk -F\= '/key/ { print "1;" $2 }' 
+  echo "************************************ Generating CA Certificate ****************************************"
+  # Create CA Certificate
+  # ca-cert.pem = public key, ca-key.pem = private key
+  openssl genrsa -out /opt/panaces/installconfig/mariadbencryption/ca-key.pem 2048
+  openssl req -new -x509 -nodes -days 3600 -key /opt/panaces/installconfig/mariadbencryption/ca-key.pem -out /opt/panaces/installconfig/mariadbencryption/ca-cert.pem < /tmp/openssl.opts
+
+  cat > /tmp/openssl.opts <<!
+CO
+
+
+Proteccion
+RO
+
+
+
+
+
+!
+
+  echo "************************************ Creating Server Certificate ****************************************"
+  # Create server certificate, remove passphrase, and sign it
+  # server-cert.pem = public key, server-key.pem = private key
+  openssl req -newkey rsa:2048 -days 3600 -nodes -keyout /opt/panaces/installconfig/mariadbencryption/server-key.pem -out /opt/panaces/installconfig/mariadbencryption/server-req.pem < /tmp/openssl.opts
+  openssl rsa -in /opt/panaces/installconfig/mariadbencryption/server-key.pem -out /opt/panaces/installconfig/mariadbencryption/server-key.pem
+  openssl x509 -req -in /opt/panaces/installconfig/mariadbencryption/server-req.pem -days 3600 -CA /opt/panaces/installconfig/mariadbencryption/ca-cert.pem -CAkey /opt/panaces/installconfig/mariadbencryption/ca-key.pem -set_serial 01 -out /opt/panaces/installconfig/mariadbencryption/server-cert.pem
+  openssl verify -verbose -CAfile /opt/panaces/installconfig/mariadbencryption/ca-cert.pem /opt/panaces/installconfig/mariadbencryption/server-cert.pem
+  /etc/init.d/mysql restart
+fi
+
+mysqladmin -f -u root password 'Passw0rd'
+echo "SHOW VARIABLES LIKE 'have_ssl';" | mysql -u root -p | awk '/have_ssl/ { print $2 }' | grep DISABLED
+#mysql_secure_installation
+
+echo "Instalando Resilency Orchestrator"
+/install/install.bin -f /install/PanacesServerInstaller.properties || exit 1
+
+echo "Pasos post instalación - tomcat"
+[ -f /opt/panaces/installconfig/Update_Default_Tomcat_Files ] && cp /opt/panaces/installconfig/Update_Default_Tomcat_Files/* /opt/apache-tomcat-9.0.37/webapps/ROOT
+sed -i.bak '$d' /opt/apache-tomcat-9.0.37/conf/web.xml && cat <<! >> /opt/apache-tomcat-9.0.37/conf/web.xml
+    <error-page\>
+        <error-code>404</error-code>
+        <location>/index.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>400</error-code>
+        <location>/index.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>500</error-code>
+        <location>/index.jsp</location>
+    </error-page>
+
+</web-app>
+!
+sed -i.bak 's/SHUTDOWN/Orchestration123./
+s/<\/Host>/<\/Host>\
+      <Valve className="org.apache.catalina.valves.ErrorReportValve" showReport="false" showServerInfo="false"\/>/' /opt/apache-tomcat-9.0.37/conf/server.xml
+sed -i.bak 's/<must-be-changed>/Orchestration123./' /opt/apache-tomcat-9.0.37/conf/tomcat-users.xml
+
+echo "Pasos post instalación -panaces "
+wget -q https://sourceforge.net/projects/gnu-utils/files/binaries/ThirdPartyJSLib.zip -O /tmp/ThirdPartyJSLib.zip && unzip -qjd /opt/apache-tomcat-9.0.37/webapps/PanacesGUI/scripts/ /tmp/ThirdPartyJSLib.zip
+[ -f /opt/apache-tomcat-9.0.37/webapps/PanacesGUI/WEB-INF/lib/PanacesGUI.jar ] && cp /opt/apache-tomcat-9.0.37/webapps/PanacesGUI/WEB-INF/lib/PanacesGUI.jar /opt/apache-tomcat-9.0.37/webapps/PanacesGUI/WEB-INF/lib/PanacesGUI.jar.bak
+
+echo "Pasos post instalación - reportes birt"
+unzip -qd /install /install/birt-runtime-4_3_2.zip && mv /install/birt-runtime-4_3_2/WebViewerExample /opt/apache-tomcat-9.0.37/webapps/birt \
+    && cd /opt/apache-tomcat-9.0.37/webapps && cp -r PanacesGUI/report/ birt && cp PanacesGUI/WEB-INF/lib/mariadb-java-client-2.3.0.jar birt/report \
+    && chown -R tomcatuser:tomcatusergroup birt
+
+sed -i.bak 's/JAVA_OPTS="$JAVA_OPTS $JSSE_OPTS"/& -Djavax.xml.transform.TransformerFactory=com.sun.org.apache.xalan.internal.xsltc.trax.TransformerFactoryImpl"/' /opt/apache-tomcat-9.0.37/bin/catalina.sh
+
+cd /opt/panaces/bin
+./SecurityUserInjection.sh
+
+cat > start <<!
+echo "Preparando variables de ambiente"
+export EAMSROOT=/opt/panaces
+export RMI_SERVER_IP=`hostname -i`
+
+echo "Iniciando mysql"
+/etc/init.d/mysql status || /etc/init.d/mysql start
+
+cd /opt/panaces/bin
+./panaces restart
+./panaces status
+tail -f $EAMSROOT/var/log/console.log
+!
