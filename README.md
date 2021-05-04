@@ -1,9 +1,15 @@
 # cro812
 IBM Resilency Orchestration 8.1.2 container
 
-Introducción a IBM Resilency Orchestration 8.1.2
+[![License](https://img.shields.io/badge/License-Apache2-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0) [![Slack](https://img.shields.io/badge/Join-Slack-blue)](https://callforcode.org/slack) [![Website](https://img.shields.io/badge/View-Website-blue)](https://code-and-response.github.io/Project-Sample/)
+
+*Read this in other languages: [English](README.md), [Español](README.es_co.md).*
+
+## Introducción a IBM Resilency Orchestration 8.1.2
 https://www.youtube.com/watch?v=YRKI2deypuI
-Preparación de un ambiente de capacitación de CRO:
+
+## Preparación de un ambiente de capacitación de CRO:
+
     1. Prepare una maquina virtual con RHEL 8.x (Linux Red Hat Enterprise) o con Ubuntu pero que tenga previamente instalado Docker
     1. Si tiene Apple Mac puede instalar docker para Mac y usar la linea de comandos
     2. Si tiene windows es un poco mas truculento usar docker para windows ya que debe seleccionar el entorno para linux y debe habilitar la virtualización de hyper-v, por lo que es mas sencillo usar VirtualBox y levantar una máquina con Ubuntu e instalar docker
@@ -38,15 +44,17 @@ Preparación de un ambiente de capacitación de CRO:
     8. > s/MODIFY_SYSTEM_FILES=0/MODIFY_SYSTEM_FILES=1/
     9. > s/TOMCAT_HOME=.*/TOMCAT_HOME=\/opt\/apache-tomcat-9.0.37/' /tmp/PanacesServerInstaller.properties > /tmp/PanacesServerCro.properties
     10. [root@crort /]# /tmp/install.bin -f /tmp/PanacesServerCro.properties
+    
     1. Ejecute los pasos post instalación descritos en la guia de instalación de CRO a partir de la página 85 (numeral 5.6) para el modo consola
     2. Inicie los servicios de CRO en el contenedor:
-    1. export EAMSROOT=/opt/panaces
-    2. /etc/init.d/mysql status || /etc/init.d/mysql start
-    3. cd /opt/panaces/bin
-    4. ./panaces restart
-    1. Por último por fuera del contenedor en otra ventana, guarde una imagen del contenedor en ejecución para no perder la instalación (recuerden, los contenedores son por defecto no persistentes)
-    1. $ docker commit crort cro812:latest
-    1. Y listo! ya tenemos una imagen base de cro que podemos usar para nuestras capacitaciones
-    1. $ docker images
+    3. export EAMSROOT=/opt/panaces
+    4. /etc/init.d/mysql status || /etc/init.d/mysql start
+    5. cd /opt/panaces/bin
+    6. ./panaces restart
+    7. Por último por fuera del contenedor en otra ventana, guarde una imagen del contenedor en ejecución para no perder la instalación (recuerden, los contenedores son por defecto no persistentes)
+    8. $ docker commit crort cro812:latest
+    9. Y listo! ya tenemos una imagen base de cro que podemos usar para nuestras capacitaciones
+    10. $ docker images
+
 REPOSITORY                           TAG             IMAGE ID      CREATED        SIZE
 localhost/cro812                     latest          05fc28b5ad50  2 months ago   4.15 GB
