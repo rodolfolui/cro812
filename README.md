@@ -1,5 +1,4 @@
-# cro812
-IBM Resilency Orchestration 8.1.2 container
+# Resilency Orchestration 8.1.2 container
 
 [![License](https://img.shields.io/badge/License-Apache2-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0) [![Slack](https://img.shields.io/badge/Join-Slack-blue)](https://callforcode.org/slack) [![Website](https://img.shields.io/badge/View-Website-blue)](https://code-and-response.github.io/Project-Sample/)
 
