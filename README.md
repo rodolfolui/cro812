@@ -4,7 +4,7 @@
 
 *Read this in other languages: [English](README.md), [Español](README.es_co.md).*
 
-## Introducción a IBM Resilency Orchestration 8.1.2
+## Introducción a Resilency Orchestration 8.1.2
 
 [![Watch the video](https://higherlogicdownload.s3.amazonaws.com/IMWUC/DeveloperWorksImages_blog-storageneers/ScreenShot2018-10-03at4.32.30PM.png)](https://youtu.be/YRKI2deypuI)
 
